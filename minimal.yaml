@@ -1,0 +1,58 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: epc
+  labels:
+    name: epc
+spec:
+  containers:
+  - name: open5gs
+    image: 5gempower/open5gs:latest
+    tty: true
+    securityContext:
+      privileged: true
+  - name: open5gs-webui
+    image: 5gempower/open5gs-webui:latest
+    tty: true
+  - name: mongo
+    image: mongo:latest
+    tty: true
+  nodeName: <put your node name here>
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: epc-service
+spec:
+  selector:
+    name: epc
+  ports:
+  - name: web-ui
+    protocol: TCP
+    port: 80
+    targetPort: 3000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: epc-service-pod
+spec:
+  selector:
+    name: epc
+  clusterIP: None
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: enb93
+  labels:
+    name: enb93
+spec:
+  containers:
+  - name: srs-enb
+    image: winlab/srsenb:latest
+    tty: true
+    securityContext:
+      privileged: true
+  nodeName: <put your node name here>
+

@@ -1,0 +1,243 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: upf-lb
+  labels:
+    name: upf-lb
+spec:
+  containers:
+  - name: strongswan
+    image: 5gempower/strongswan:latest
+    env:
+    - name: server_server_id
+      value: upf-lb
+    - name: has_own_subnet
+      value: "yes"
+    - name: server_client_subnet
+      value: "10.0.1.0\\/24"
+    - name: server_client_user
+      value: enb-user
+    - name: server_client_pass
+      value: enb-pass
+    securityContext:
+      privileged: true
+  - name: upf-lb
+    image: 5gempower/upf:latest
+    env:
+    - name: mode
+      value: upf_lb
+    securityContext:
+      privileged: true
+  nodeSelector:
+    alias: cloud
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: upf-lb-service
+spec:
+  selector:
+    name: upf-lb
+  ports:
+  - name: ike
+    protocol: UDP
+    port: 4500
+    targetPort: 4500
+  - name: ike2
+    protocol: UDP
+    port: 500
+    targetPort: 500
+  - name: upf-tunnel
+    protocol: UDP
+    port: 5555
+    targetPort: 5555
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: upf
+  labels:
+    name: upf
+spec:
+  containers:
+  - name: strongswan
+    image: 5gempower/strongswan:latest
+    env:
+    - name: client_server_address
+      value: epc-service
+    - name: client_server_id
+      value: epc
+    - name: client_server_hostname
+      value: "epc-service-pod"
+    - name: client_client_subnet
+      value: "10.0.1.0\\/24"
+    - name: client_client_user
+      value: upf-user
+    - name: client_client_pass
+      value: upf-pass
+    securityContext:
+      privileged: true
+  - name: upf
+    image: winlab/lightedge-upfservice:latest
+    env:
+    - name: mode
+      value: upf
+    - name: enbs_subnet
+      value: "10.0.1.0/24"
+    securityContext:
+      privileged: true
+  - name: upf-agent
+    image: winlab/lightedge-upfservice-manager:latest
+    securityContext:
+      privileged: true
+  - name: mongo
+    image: mongo
+    volumeMounts:
+    - name: upf-storage
+      mountPath: /data/db
+      subPath: mongo-upf
+  - name: influxdb
+    image: influxdb
+  volumes:
+  - name: upf-storage
+    persistentVolumeClaim:
+      claimName: cloud-pvc
+  nodeSelector:
+    alias: cloud
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: upf-service
+spec:
+  selector:
+    name: upf
+  ports:
+  - name: upf-tunnel
+    protocol: UDP
+    port: 5555
+    targetPort: 5555
+  - name: upf-agent-gui
+    protocol: TCP
+    port: 80
+    targetPort: 8888
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: epc
+  labels:
+    name: epc
+spec:
+  containers:
+  - name: strongswan
+    image: 5gempower/strongswan:latest
+    env:
+    - name: server_server_id
+      value: epc
+    - name: server_client_subnet
+      value: "10.0.1.0\\/24"
+    - name: server_client_user
+      value: upf-user
+    - name: server_client_pass
+      value: upf-pass
+    securityContext:
+      privileged: true
+  - name: open5gs
+    image: 5gempower/open5gs:latest
+    env:
+    - name: k8s_dns
+      value: "yes"
+    tty: true
+    securityContext:
+      privileged: true
+  - name: open5gs-webui
+    image: 5gempower/open5gs-webui:latest
+    tty: true
+  - name: mongo
+    image: mongo:latest
+    tty: true
+    volumeMounts:
+    - name: epc-storage
+      mountPath: /data/db
+      subPath: mongo-epc
+  volumes:
+  - name: epc-storage
+    persistentVolumeClaim:
+      claimName: cloud-pvc
+  nodeSelector:
+    alias: cloud
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: epc-service
+spec:
+  selector:
+    name: epc
+  ports:
+  - name: ike
+    protocol: UDP
+    port: 4500
+    targetPort: 4500
+  - name: ike2
+    protocol: UDP
+    port: 500
+    targetPort: 500
+  - name: web-ui
+    protocol: TCP
+    port: 80
+    targetPort: 3000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: epc-service-pod
+spec:
+  selector:
+    name: epc
+  clusterIP: None
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: enb93
+  labels:
+    name: enb93
+spec:
+  containers:
+  - name: strongswan
+    image: 5gempower/strongswan:latest
+    env:
+    - name: client_server_address
+      value: upf-lb-service
+    - name: client_server_id
+      value: upf-lb
+    - name: client_server_hostname
+      value: "epc-service-pod"
+    - name: client_client_ip
+      value: "%config"
+    - name: client_client_user
+      value: enb-user
+    - name: client_client_pass
+      value: enb-pass
+    securityContext:
+      privileged: true
+  - name: srs-enb
+    image: winlab/srsenb:latest
+    tty: true
+    env:
+    - name: ipsec
+      value: "yes"
+    - name: "enb_id"
+      value: "0x19B"
+    - name: "mnc"
+      value: "93"
+    - name: "dl_earfcn"
+      value: "3400"
+    - name: "n_prb"
+      value: "50"
+    securityContext:
+      privileged: true
+  nodeSelector:
+    alias: vbs1
