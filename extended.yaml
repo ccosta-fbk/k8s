@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: strongswan
-    image: 5gempower/strongswan:latest
+    image: sensefbk/strongswan:latest
     env:
     - name: server_server_id
       value: upf-lb
@@ -22,7 +22,7 @@ spec:
     securityContext:
       privileged: true
   - name: upf-lb
-    image: 5gempower/upf:latest
+    image: sensefbk/lightedge-upfservice:latest
     env:
     - name: mode
       value: upf_lb
@@ -61,7 +61,7 @@ metadata:
 spec:
   containers:
   - name: strongswan
-    image: 5gempower/strongswan:latest
+    image: sensefbk/strongswan:latest
     env:
     - name: client_server_address
       value: epc-service
@@ -78,7 +78,7 @@ spec:
     securityContext:
       privileged: true
   - name: upf
-    image: winlab/lightedge-upfservice:latest
+    image: sensefbk/lightedge-upfservice:latest
     env:
     - name: mode
       value: upf
@@ -87,7 +87,7 @@ spec:
     securityContext:
       privileged: true
   - name: upf-agent
-    image: winlab/lightedge-upfservice-manager:latest
+    image: sensefbk/lightedge-upfservice-manager:latest
     securityContext:
       privileged: true
   - name: mongo
@@ -131,7 +131,7 @@ metadata:
 spec:
   containers:
   - name: strongswan
-    image: 5gempower/strongswan:latest
+    image: sensefbk/strongswan:latest
     env:
     - name: server_server_id
       value: epc
@@ -144,7 +144,7 @@ spec:
     securityContext:
       privileged: true
   - name: open5gs
-    image: 5gempower/open5gs:latest
+    image: sensefbk/open5gs:latest
     env:
     - name: k8s_dns
       value: "yes"
@@ -152,7 +152,7 @@ spec:
     securityContext:
       privileged: true
   - name: open5gs-webui
-    image: 5gempower/open5gs-webui:latest
+    image: sensefbk/open5gs-webui:latest
     tty: true
   - name: mongo
     image: mongo:latest
@@ -207,7 +207,7 @@ metadata:
 spec:
   containers:
   - name: strongswan
-    image: 5gempower/strongswan:latest
+    image: sensefbk/strongswan:latest
     env:
     - name: client_server_address
       value: upf-lb-service
@@ -224,7 +224,7 @@ spec:
     securityContext:
       privileged: true
   - name: srs-enb
-    image: winlab/srsenb:latest
+    image: sensefbk/srslte-enb:latest
     tty: true
     env:
     - name: ipsec
